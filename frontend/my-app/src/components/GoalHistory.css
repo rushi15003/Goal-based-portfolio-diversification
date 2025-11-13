@@ -1,0 +1,120 @@
+.goal-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.goal-history-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.goal-history-item:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  transform: translateX(4px);
+}
+
+.goal-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.goal-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.goal-risk {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+.goal-risk-conservative {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.goal-risk-moderate {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.goal-risk-aggressive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.goal-history-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.goal-horizon {
+  font-weight: 500;
+}
+
+.goal-date {
+  font-size: 0.75rem;
+}
+
+.goal-history-loading,
+.goal-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.goal-history-loading p {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.goal-history-empty p {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.goal-history-empty small {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+
