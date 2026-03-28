@@ -1,0 +1,21 @@
+{
+  "name": "Goal-Based-Portfolio-Allocation-System-main",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Goal-Based Portfolio Allocation System (FastAPI backend + Vite/React frontend)",
+  "scripts": {
+    "frontend:install": "npm --prefix frontend/my-app install",
+    "frontend:dev": "npm --prefix frontend/my-app run dev",
+    "frontend:build": "npm --prefix frontend/my-app run build",
+    "frontend:preview": "npm --prefix frontend/my-app run preview",
+
+    "backend:install": "cd backend && if exist venv rmdir /s /q venv && py -m venv venv && .\\venv\\Scripts\\python -m pip install -r requirements.txt",
+    "backend:dev": "cd backend && .\\venv\\Scripts\\python -m uvicorn app.main:app --reload",
+
+    "install:all": "npm run frontend:install && npm run backend:install",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run backend:dev\" \"npm run frontend:dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}

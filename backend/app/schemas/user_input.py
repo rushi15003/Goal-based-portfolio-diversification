@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 from typing import Literal, Optional, Dict
 from datetime import datetime
 
@@ -56,3 +56,17 @@ class UserInputResult(BaseModel):
     portfolio_table: Optional[list] = None
 
 
+class PortfolioQuestion(BaseModel):
+    """Question about a specific portfolio/goal."""
+
+    question: str = Field(..., min_length=3, description="User's natural language question")
+    goal_id: Optional[str] = Field(
+        default=None,
+        description="Optional goal/portfolio id; if omitted, the latest goal is used",
+    )
+
+
+class PortfolioAnswer(BaseModel):
+    """AI answer to a portfolio question."""
+
+    answer: str

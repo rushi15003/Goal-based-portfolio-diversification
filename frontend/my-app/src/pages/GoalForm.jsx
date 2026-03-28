@@ -13,6 +13,10 @@ export default function GoalForm({ onGoalCreated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
+  const [qaQuestion, setQaQuestion] = useState("");
+  const [qaAnswer, setQaAnswer] = useState("");
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaError, setQaError] = useState("");
 
   function showToast(message, type = "info") {
     setToast({ message, type });
@@ -56,6 +60,9 @@ export default function GoalForm({ onGoalCreated }) {
     setResult(null);
     setError("");
     showToast("Form reset", "info");
+    setQaQuestion("");
+    setQaAnswer("");
+    setQaError("");
   }
 
   function handleExportPDF() {
@@ -88,6 +95,30 @@ export default function GoalForm({ onGoalCreated }) {
     window.URL.revokeObjectURL(url);
     
     showToast("Portfolio exported to CSV", "success");
+  }
+
+  async function handleAskQuestion(e) {
+    e.preventDefault();
+    if (!result || !result.user_input?.id || !qaQuestion.trim()) {
+      return;
+    }
+    setQaLoading(true);
+    setQaError("");
+    try {
+      const res = await api.post("/inputs/chat", {
+        question: qaQuestion.trim(),
+        goal_id: result.user_input.id,
+      });
+      setQaAnswer(res.data.answer || "");
+    } catch (err) {
+      console.error("Chat error:", err);
+      setQaError(
+        err.response?.data?.detail ||
+          "Unable to get an AI answer right now. Please try again."
+      );
+    } finally {
+      setQaLoading(false);
+    }
   }
 
   return (
@@ -143,6 +174,61 @@ export default function GoalForm({ onGoalCreated }) {
           {result.notes?.ai_summary && (
             <AISummary summary={result.notes.ai_summary} />
           )}
+          
+          {/* Portfolio-aware chatbot */}
+          <section className="gbp-card" style={{ marginTop: "1.5rem" }}>
+            <h3 style={{ marginTop: 0 }}>Ask a question about this portfolio</h3>
+            <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: "0.5rem" }}>
+              Example: “Is this allocation too aggressive for a {result.user_input.horizon}-year goal?” or
+              “How should I adjust if I can increase my SIP by 5,000 per month?”
+            </p>
+            <form onSubmit={handleAskQuestion} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <textarea
+                rows={3}
+                value={qaQuestion}
+                onChange={(e) => setQaQuestion(e.target.value)}
+                placeholder="Type your question about this portfolio..."
+                style={{
+                  resize: "vertical",
+                  padding: "0.6rem 0.75rem",
+                  borderRadius: "0.5rem",
+                  border: "1px solid #374151",
+                  background: "rgba(15, 23, 42, 0.8)",
+                  color: "white",
+                  fontSize: 14,
+                }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <button
+                  type="submit"
+                  disabled={qaLoading || !qaQuestion.trim()}
+                  className="btn-secondary"
+                  style={{ paddingInline: "1.25rem" }}
+                >
+                  {qaLoading ? "Thinking..." : "Ask AI"}
+                </button>
+                {qaError && (
+                  <span style={{ color: "#fca5a5", fontSize: 12 }}>{qaError}</span>
+                )}
+              </div>
+            </form>
+            {qaAnswer && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.75rem 0.9rem",
+                  borderRadius: "0.75rem",
+                  background: "rgba(15, 23, 42, 0.9)",
+                  border: "1px solid rgba(96, 165, 250, 0.4)",
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {qaAnswer}
+              </div>
+            )}
+          </section>
           
           {result.notes && (
             <details className="gbp-notes">

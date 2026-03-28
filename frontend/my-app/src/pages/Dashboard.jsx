@@ -16,6 +16,19 @@ export default function Dashboard() {
   });
   const [activeTab, setActiveTab] = useState('portfolio'); // 'portfolio' or 'market'
 
+  async function fetchStats() {
+    try {
+      const res = await api.get('/inputs/stats');
+      setStats(res.data);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  }
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   function formatCurrency(value) {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -25,7 +38,8 @@ export default function Dashboard() {
   }
 
   function handleGoalCreated() {
-    // Stats remain at 0
+    // Refresh dashboard stats in "real time" when a new goal/portfolio is created
+    fetchStats();
   }
 
   return (
