@@ -4,3 +4,5 @@ __pycache__/
 .Fintech/
 .env
 .env.example
+backend/.env
+backend/.env.example
