@@ -1,3 +1,5 @@
 backend/Fintech/
 frontend/node_modules/
 frontend/my-app/node_modules/
+backend\.env
+backend\.env.example
