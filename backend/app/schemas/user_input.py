@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Literal, Optional, Dict
+from typing import Literal, Optional, Dict, List
 from datetime import datetime
 
 
@@ -56,13 +56,22 @@ class UserInputResult(BaseModel):
     portfolio_table: Optional[list] = None
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "model"]
+    parts: str
+
+
 class PortfolioQuestion(BaseModel):
     """Question about a specific portfolio/goal."""
 
-    question: str = Field(..., min_length=3, description="User's natural language question")
+    question: str = Field(..., min_length=2, description="User's natural language question")
     goal_id: Optional[str] = Field(
         default=None,
         description="Optional goal/portfolio id; if omitted, the latest goal is used",
+    )
+    history: Optional[List[ChatMessage]] = Field(
+        default=[],
+        description="Previous chat messages in the conversation thread"
     )
 
 

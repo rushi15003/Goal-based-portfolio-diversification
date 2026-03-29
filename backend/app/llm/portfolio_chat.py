@@ -13,7 +13,7 @@ except Exception:  # pragma: no cover
     genai = None
 
 
-def _get_gemini_model():
+def _get_gemini_model(system_instruction: str = None):
     """
     Configure and return a Gemini GenerativeModel.
 
@@ -25,7 +25,9 @@ def _get_gemini_model():
     try:
         genai.configure(api_key=api_key)
         # Model id commonly available for text chat in google.generativeai
-        return genai.GenerativeModel("gemini-1.5-flash-latest")
+        if system_instruction:
+            return genai.GenerativeModel("gemini-2.5-flash", system_instruction=system_instruction)
+        return genai.GenerativeModel("gemini-2.5-flash")
     except Exception:
         return None
 
@@ -74,12 +76,12 @@ def answer_portfolio_question(
     allocation: dict,
     sip: dict,
     portfolio_table: list,
+    history: list = None,
 ) -> str:
     """
-    Answer a question about this specific portfolio using Gemini.
+    Answer a question about this specific portfolio using Gemini via a chat session.
     Falls back with a clear message if Gemini is not available.
     """
-    model = _get_gemini_model()
     summary = _summarise_portfolio(
         target_corpus=target_corpus,
         horizon=horizon,
@@ -89,27 +91,30 @@ def answer_portfolio_question(
         portfolio_table=portfolio_table,
     )
 
+    system_instruction = (
+        "You are a SEBI-style, long-term focused financial planning assistant.\n\n"
+        "ONLY answer based on the user's portfolio context below. Do NOT invent portfolio numbers.\n"
+        "Do NOT give tax, legal, or product-specific advice. Speak in simple, clear Indian retail\n"
+        "investor language, and always remind the user that this is educational, not personalized advice.\n"
+        "Keep answers concise, 2-4 short paragraphs or bullet points, referencing allocations and stats where relevant.\n\n"
+        "User's portfolio context:\n"
+        f"{summary}\n"
+    )
+
+    model = _get_gemini_model(system_instruction=system_instruction)
+
     if model is None:
         return (
             "Gemini is not configured correctly on the server. Please check GEMINI_API_KEY "
             "in the backend .env file and ensure the server has internet access."
         )
 
-    prompt = (
-        "You are a SEBI-style, long-term focused financial planning assistant.\n\n"
-        "ONLY answer based on the user's portfolio context below. Do NOT invent portfolio numbers.\n"
-        "Do NOT give tax, legal, or product-specific advice. Speak in simple, clear Indian retail\n"
-        "investor language, and always remind the user that this is educational, not personalized advice.\n\n"
-        "User's portfolio context:\n"
-        f"{summary}\n\n"
-        "User's question:\n"
-        f"{question}\n\n"
-        "Now answer the question in 2–4 short paragraphs or bullet points, referencing their\n"
-        "allocations, SIP, horizon, and risk profile where relevant.\n"
-    )
-
     try:
-        response = model.generate_content(prompt)
+        chat_args = {}
+        if history:
+            chat_args["history"] = history
+        chat = model.start_chat(**chat_args)
+        response = chat.send_message(question)
         text = getattr(response, "text", "").strip()
         if not text:
             raise ValueError("Empty response from Gemini")

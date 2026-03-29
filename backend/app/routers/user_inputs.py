@@ -233,6 +233,7 @@ async def chat_about_portfolio(
         allocation=allocation,
         sip=sip,
         portfolio_table=portfolio_table,
+        history=[h.model_dump(mode="json") for h in payload.history] if payload.history else None,
     )
 
     return PortfolioAnswer(answer=answer)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../api/client";
 import Toast from "../components/Toast";
 import AISummary from "../components/AISummary";
@@ -14,12 +14,28 @@ export default function GoalForm({ onGoalCreated }) {
   const [error, setError] = useState("");
   const [toast, setToast] = useState(null);
   const [qaQuestion, setQaQuestion] = useState("");
-  const [qaAnswer, setQaAnswer] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
   const [qaLoading, setQaLoading] = useState(false);
   const [qaError, setQaError] = useState("");
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   function showToast(message, type = "info") {
     setToast({ message, type });
+  }
+
+  function formatMessage(text) {
+    if (!text) return "";
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} style={{ color: "#f8fafc" }}>{part.slice(2, -2)}</strong>;
+      }
+      return <span key={i}>{part}</span>;
+    });
   }
 
   function handleChange(e) {
@@ -61,7 +77,7 @@ export default function GoalForm({ onGoalCreated }) {
     setError("");
     showToast("Form reset", "info");
     setQaQuestion("");
-    setQaAnswer("");
+    setChatMessages([]);
     setQaError("");
   }
 
@@ -98,20 +114,30 @@ export default function GoalForm({ onGoalCreated }) {
   }
 
   async function handleAskQuestion(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!result || !result.user_input?.id || !qaQuestion.trim()) {
       return;
     }
     setQaLoading(true);
     setQaError("");
+    
+    const userMessage = { role: "user", parts: qaQuestion.trim() };
+    const currentHistory = [...chatMessages];
+    setChatMessages([...currentHistory, userMessage]);
+    setQaQuestion("");
+
     try {
       const res = await api.post("/inputs/chat", {
-        question: qaQuestion.trim(),
+        question: userMessage.parts,
         goal_id: result.user_input.id,
+        history: currentHistory.length > 0 ? currentHistory : undefined
       });
-      setQaAnswer(res.data.answer || "");
+      const aiMessage = { role: "model", parts: res.data.answer || "" };
+      setChatMessages((prev) => [...prev, aiMessage]);
     } catch (err) {
       console.error("Chat error:", err);
+      // Remove the optimistic user message or show error
+      setChatMessages(currentHistory);
       setQaError(
         err.response?.data?.detail ||
           "Unable to get an AI answer right now. Please try again."
@@ -178,15 +204,80 @@ export default function GoalForm({ onGoalCreated }) {
           {/* Portfolio-aware chatbot */}
           <section className="gbp-card" style={{ marginTop: "1.5rem" }}>
             <h3 style={{ marginTop: 0 }}>Ask a question about this portfolio</h3>
-            <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: "0.5rem" }}>
-              Example: “Is this allocation too aggressive for a {result.user_input.horizon}-year goal?” or
-              “How should I adjust if I can increase my SIP by 5,000 per month?”
-            </p>
+            {chatMessages.length === 0 && (
+              <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: "0.5rem" }}>
+                Example: “Is this allocation too aggressive for a {result.user_input.horizon}-year goal?” or
+                “How should I adjust if I can increase my SIP by 5,000 per month?”
+              </p>
+            )}
+
+            {chatMessages.length > 0 && (
+              <div
+                style={{
+                  maxHeight: "350px",
+                  overflowY: "auto",
+                  padding: "1rem",
+                  background: "rgba(15, 23, 42, 0.4)",
+                  border: "1px solid rgba(55, 65, 81, 0.5)",
+                  borderRadius: "0.5rem",
+                  marginBottom: "1rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
+                {chatMessages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                      background: msg.role === "user" ? "rgba(59, 130, 246, 0.2)" : "rgba(30, 41, 59, 0.8)",
+                      border: msg.role === "user" ? "1px solid rgba(59, 130, 246, 0.4)" : "1px solid rgba(96, 165, 250, 0.4)",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "0.75rem",
+                      maxWidth: "85%",
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                      whiteSpace: "pre-wrap",
+                      color: msg.role === "user" ? "#dbeafe" : "#cbd5e1",
+                    }}
+                  >
+                    {msg.role === "model" ? formatMessage(msg.parts) : msg.parts}
+                  </div>
+                ))}
+                {qaLoading && (
+                  <div
+                    style={{
+                      alignSelf: "flex-start",
+                      background: "rgba(30, 41, 59, 0.8)",
+                      border: "1px solid rgba(96, 165, 250, 0.4)",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "0.75rem",
+                      fontSize: 14,
+                      color: "#9ca3af",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Typing...
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+            )}
+
             <form onSubmit={handleAskQuestion} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <textarea
-                rows={3}
+                rows={2}
                 value={qaQuestion}
                 onChange={(e) => setQaQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!qaLoading && qaQuestion.trim()) {
+                      handleAskQuestion();
+                    }
+                  }
+                }}
                 placeholder="Type your question about this portfolio..."
                 style={{
                   resize: "vertical",
@@ -205,29 +296,13 @@ export default function GoalForm({ onGoalCreated }) {
                   className="btn-secondary"
                   style={{ paddingInline: "1.25rem" }}
                 >
-                  {qaLoading ? "Thinking..." : "Ask AI"}
+                  {qaLoading ? "Wait..." : "Send"}
                 </button>
                 {qaError && (
                   <span style={{ color: "#fca5a5", fontSize: 12 }}>{qaError}</span>
                 )}
               </div>
             </form>
-            {qaAnswer && (
-              <div
-                style={{
-                  marginTop: "0.75rem",
-                  padding: "0.75rem 0.9rem",
-                  borderRadius: "0.75rem",
-                  background: "rgba(15, 23, 42, 0.9)",
-                  border: "1px solid rgba(96, 165, 250, 0.4)",
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {qaAnswer}
-              </div>
-            )}
           </section>
           
           {result.notes && (
